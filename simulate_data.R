@@ -1,61 +1,35 @@
 library(survival)
+library(data.table)
 
-#set parameters
-set.seed(1234)
+# baseline hazard: Weibull
+# h_0(t)=lambda rho t^(rho-1)
 
-n = 40000 #sample size
+# N = sample size    
+# lambda = scale parameter in h0()
+# rho = shape parameter in h0()
+# beta = fixed effect parameter
+# rateC = rate parameter of the exponential distribution of C
 
-
-#functional relationship
-
-lambda=0.000020 #constant baseline hazard 2 per 100000 per 1 unit time
-
-b_haz <-function(t) #baseline hazard
-  {
-    lambda #constant hazard wrt time 
-  }
-
-x = cbind(hba1c=rnorm(n,2,.5)-2,age=rnorm(n,40,5)-40,duration=rnorm(n,10,2)-10)
-
-B = c(1.1,1.2,1.3) # hazard ratios (model coefficients)
-
-hist(x %*% B) #distribution of scores
-
-haz <-function(t) #hazard function
-  b_haz(t) * exp(x %*% B)
-
-c_hf <-function(t) #cumulative hazards function
-  exp(x %*% B) * lambda * t 
-
-S <- function(t) #survival function
+simulWeib <- function(N, lambda, rho, beta, rateC)
 {
-  exp(-c_hf(t))
+  # covariate --> N Bernoulli trials
+  x <- sample(x=c(0, 1), size=N, replace=TRUE, prob=c(0.5, 0.5))
+
+  # Weibull latent event times
+  u <- runif(n=N)
+  # Inverse cdf
+  Tlat <- (- log(u) / (lambda * exp(x * beta)))^(1 / rho)
+
+  # censoring times
+  C <- rexp(n=N, rate=rateC)
+
+  # follow-up times and event indicators
+  time <- pmin(Tlat, C)
+  status <- as.numeric(Tlat <= C)
+
+  # data set
+  data.frame(id=1:N,
+             time=time,
+             status=status,
+             x=x)
 }
-
-S(.005)
-S(1)
-S(5)
-
-#simulate censoring
-
-time = rnorm(n,10,2)
-
-S_prob = S(time)
-
-#simulate events
-
-event = ifelse(runif(1)>S_prob,1,0)
-
-#model fit
-
-km = survfit(Surv(time,event)~1,data=data.frame(x))
-
-plot(km) #kaplan-meier plot
-
-#Cox PH model
-
-fit = coxph(Surv(time,event)~ hba1c+age+duration, data=data.frame(x))
-
-summary(fit)            
-
-cox.zph(fit)
