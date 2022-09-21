@@ -36,17 +36,14 @@ BETA = .81
 HORIZON = 100
 
 
-out <- recreate_allal()
-filename=file.path(outdir_1D, 'allal_4diagnostics_example.png')
-ggsave(out$plot, filename=filename, width=12, height=10, units='cm')
+# out <- recreate_allal()
+# filename=file.path(outdir_1D, 'allal_4diagnostics_example.png')
+# ggsave(out$plot, filename=filename, width=12, height=10, units='cm')
 
-if(0)
-{
-        LAMBDA0 <- c(0.2, 0.3)
-        ALPHA <- matrix(c(.5, .3, 0, .1), byrow=T, 2)
-        BETA <- matrix(c(.6, .6, .6, .6), byrow=T, 2)
-        HORIZON <- 3600
-}
+LAMBDA0 <- c(0.2, 0.3)
+ALPHA <- matrix(c(.5, .3, 0, .1), byrow=T, 2)
+BETA <- matrix(c(.6, .6, .6, .6), byrow=T, 2)
+HORIZON <- 3600
 
 
 recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=BETA, horizon=HORIZON)
@@ -143,16 +140,17 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
 
         # simulate data: one dimensional Hawkes process
         true_pars <- list(
-                lambda0 = LAMBDA0,
-                alpha = ALPHA,
-                beta = BETA,
-                horizon = HORIZON)
+                lambda0 = lambda0,
+                alpha = alpha,
+                beta = beta,
+                horizon = horizon)
 
         D <- max(
                 length(lambda0),
                 length(beta),
                 sqrt(length(alpha))
         )
+        
         
         h_1 <- with(true_pars,
                     simulateHawkes(lambda0=lambda0,
@@ -221,6 +219,17 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
                         ggsave(g, filename=filename, width=12.5, height=10, units='cm')
                         g
                 }
+        
+                ttheme(
+                       base_size = 4,
+                       base_style = "default",
+                       base_colour = "black",
+                       padding = unit(c(4, 4), "mm"),
+                       colnames.style = colnames_style(size = 4),
+                       rownames.style = rownames_style(size = 4),
+                       tbody.style = tbody_style(size = 4)
+                )
+
 
                 summary_tabs <- .table.compare.params(PARS1=true_pars[1:3], PARS2=hat_pars[1:3])
                 out1 <- list(plot=lapply(1:D, .f))
@@ -239,7 +248,7 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
 
                 tmp <- paste0('allal_4diagnostics_', D, 'all_dims_estimates.png')
                 filename=file.path(outdir_multi, tmp)
-                ggsave(g, filename=filename, width=12.5, height=10, units='cm')
+                ggsave(g, filename=filename, width=30, height=20, units='cm')
                 g
         }
 
