@@ -22,8 +22,7 @@ outdir_multi <- file.path(outdir, 'hawkes_multid')
 
 # source(file.path(git.dir, 'visualisations.R'))
 source(file.path(git.dir, 'simulate_hawkes.R'))
-source(file.path(git.dir, 'hawkes_helpers.R'))
-
+source(file.path(git.dir, 'functions', 'hawkes_helpers.R'))
 
 # Hawkes library only allows for exponential excitation functions
 # meaning h(t) = alpha exp(-beta t) -> int h(t) = alpha/beta 
@@ -36,113 +35,18 @@ ALPHA = .6
 BETA = .81
 HORIZON = 100
 
-recreate_allal <- function(lambda0=LAMBDA0, alpha=ALPHA, beta=BETA, horizon=HORIZON, return.plot=TRUE)
-{
-
-        h_expdecay <- function(x, alpha, beta)
-                alpha * exp(- beta * x )
-
-        compensator <- function(x, pars, history)
-        {
-                out <- rep(NA, length(x))
-
-                for(idx in seq_along(x))
-                {
-                        y <- x[idx]
-                        
-                        events_prior_y <- history[history <= y]
-                        out[idx] <- pars$lambda0 + sum(h_expdecay( y - events_prior_y, pars$alpha, pars$beta))
-                }
-                out
-        }
-
-        integrated_compensator <- function(x, pars,  history)
-        {
-                # check entries are sorted
-                stopifnot( all(sort(x, decreasing=FALSE) == x ))
-
-                integrated_h <- function(x)
-                        with(pars, alpha/beta * (1 - exp(-beta * x)))
-
-                # intensities associated to events that happened
-                out <- rep(NA, length(x))
-                for(idx in seq_along(x))
-                {
-                        y <- x[idx]
-                        base = pars$lambda0 * y
-                        events_prior_y <- history[history <= y]
-                        out[idx] <- base + sum(integrated_h(y - events_prior_y))
-                }
-                out
-        }
-
-        print_parameters <- function(x)
-        {
-                for (n in names(x))
-                        cat(n, ': ', x[[n]], '\n')
-                cat('\n\n')
-        }
-
-
-        # simulate data: one dimensional Hawkes process
-        h_1 <- simulateHawkes(lambda0=lambda0,
-                            alpha=alpha,
-                            beta=beta,
-                            horizon=horizon)
-
-        # estimate parameters via ML
-        hat_pars <- maximum_likelihood(h_1[[1]])
-        print_parameters(hat_pars)
-        
-        # find the compensator
-        pois_history <- integrated_compensator(h_1[[1]], pars=hat_pars, history=h_1[[1]])
-        pois_difftimes <- diff(pois_history)
-                
-        # Make plots and tests
-        if(return.plot)
-        {
-                p1 <- plot.trajectory.and.conditionalintensity(history=h_1[[1]])
-                force(p1)
-        }
-
-        envelope <- plot.envelope.test(poisson_t = pois_history)
-        p2 <- envelope$plot
-        if(return.plot)
-                force(p2)
-
-        kstest <- make.cdfplot.kstest(poisson_deltat=pois_difftimes)
-        if(return.plot)
-        {
-                p3 <- kstest$plot
-                force(p3)
-        }
-
-        if(return.plot)
-        {
-                p4 <- plot.martingale.residuals(pois_history, history=h_1[[1]])
-                force(p4)
-        }
-
-        out <- list(KStest = kstest$pvalue, envelopeout=envelope$test)
-        if(return.plot)
-        {
-                p <- ggpubr::ggarrange(p1, p2, p3, p4)
-                out1 <- list( plot = p)
-
-                out <- append(out, out1)
-        }
-        return(out)
-}
-
 
 out <- recreate_allal()
 filename=file.path(outdir_1D, 'allal_4diagnostics_example.png')
 ggsave(out$plot, filename=filename, width=12, height=10, units='cm')
 
-LAMBDA0 <- c(0.2, 0.3)
-ALPHA <- matrix(c(.5, .3, 0, .1), byrow=T, 2)
-BETA <- matrix(c(.6, .6, .6, .6), byrow=T, 2)
-HORIZON <- 3600
+if(0)
+{
+        LAMBDA0 <- c(0.2, 0.3)
+        ALPHA <- matrix(c(.5, .3, 0, .1), byrow=T, 2)
+        BETA <- matrix(c(.6, .6, .6, .6), byrow=T, 2)
+        HORIZON <- 3600
+}
 
 
 recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=BETA, horizon=HORIZON)
@@ -171,6 +75,7 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
                         x0 <- x[idx]
                         .select <- function(vec)
                                 vec[vec <= x0]
+
                         events_prior_x0 <- lapply(history, .select)
                         diff_x0_epx0 <- lapply(events_prior_x0, function(a){x0 - a})
 
@@ -237,15 +142,11 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
 
 
         # simulate data: one dimensional Hawkes process
-        if(0)
-        {
-                true_pars <- list(
-                        lambda0 = LAMBDA0,
-                        alpha = ALPHA,
-                        beta = BETA,
-                        horizon = HORIZON
-                )
-        }
+        true_pars <- list(
+                lambda0 = LAMBDA0,
+                alpha = ALPHA,
+                beta = BETA,
+                horizon = HORIZON)
 
         D <- max(
                 length(lambda0),
@@ -275,6 +176,8 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
         if(return.plot)
         {
                 p1 <- plot.trajectory.and.conditionalintensity(t=0, history=h_1, by_step=2)
+                if(D == 1)
+                        p1 <- list(plot=p1)
                 force(p1)
         }
 
@@ -319,11 +222,26 @@ recreate_multidimensional_allal <- function( lambda0=LAMBDA0, alpha=ALPHA, beta=
                         g
                 }
 
+                summary_tabs <- .table.compare.params(PARS1=true_pars[1:3], PARS2=hat_pars[1:3])
                 out1 <- list(plot=lapply(1:D, .f))
                 out <- append(out, out1)
         }
-        ggarrange(
-                out$plot[[1]],
-                out$plot[[2]]
-        )
+
+        if(D == 2 & return.plot)
+        {
+                g <- ggarrange(
+                        out$plot[[1]],
+                        out$plot[[2]],
+                        summary_tabs[[1]],
+                        summary_tabs[[2]],
+                        ncol=2, nrow=2,
+                        heights=c(.9, .1))
+
+                tmp <- paste0('allal_4diagnostics_', D, 'all_dims_estimates.png')
+                filename=file.path(outdir_multi, tmp)
+                ggsave(g, filename=filename, width=12.5, height=10, units='cm')
+                g
+        }
+
+        out
 }
