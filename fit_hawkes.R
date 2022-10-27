@@ -11,7 +11,7 @@ if(dir.exists('/home/andrea/'))
 {
         git.dir <- '~/git/modelling_events'
 }else{
-        git.dir <- ''
+        git.dir <- '~/Documents/CDT Modules/modelling_events'
 }
 # TODO: make your own git.dir
 

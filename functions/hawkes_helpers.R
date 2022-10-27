@@ -133,7 +133,7 @@ recreate_allal <- function(lambda0=LAMBDA0, alpha=ALPHA, beta=BETA, horizon=HORI
                             horizon=horizon)
 
         # estimate parameters via ML
-        hat_pars <- maximum_likelihood(h_1[[1]])
+        hat_pars <- maximum_likelihood_hawkes(h_1[[1]])
         print_parameters(hat_pars)
         
         # find the compensator
@@ -199,7 +199,7 @@ make.cdfplot.kstest <- function(poisson_deltat)
         list(plot=p, pvalue=tmp$p.value)
 }
 
-plot.trajectory.and.conditionalintensity <- function(t, history, by_step=.1)
+plot.trajectory.and.conditionalintensity <- function(t, history, by_step=.1, horizon=HORIZON)
 {
         if(0)
         {

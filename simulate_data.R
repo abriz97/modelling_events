@@ -188,6 +188,3 @@ cat(
 hist(betaHat)
 abline(v=BETA, col='red')
 abline(v=0, col='blue')
-
-
-
